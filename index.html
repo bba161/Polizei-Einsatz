@@ -16,14 +16,14 @@
     .inventory{position:absolute;z-index:3;top:2.5%;bottom:2.5%;left:2.5%;width:44%;display:flex;flex-direction:column;padding:clamp(10px,2vw,20px);background:rgba(255,255,255,.93);border:1px solid rgba(255,255,255,.98);border-radius:13px;box-shadow:0 8px 28px rgba(11,22,31,.14);backdrop-filter:blur(5px)}.inventory.right{left:auto;right:2.5%}.inventory h2{margin:0;padding-bottom:11px;border-bottom:1px solid var(--line);font-size:clamp(15px,2.2vw,22px);line-height:1.05}.items{display:grid;gap:8px;min-height:0;overflow:auto;margin:0;padding:12px 0 0;list-style:none}.items button{width:100%;padding:clamp(8px,1.2vw,13px);color:var(--ink);text-align:left;background:rgba(244,243,238,.86);border:1px solid var(--line);border-radius:8px;font-size:clamp(11px,1.65vw,17px);font-weight:700;line-height:1.2;cursor:pointer}.items button:hover,.items button.selected{background:#fff8e8;border-color:var(--yellow)}
     .detail{position:absolute;z-index:5;top:50%;left:50%;display:grid;grid-template-columns:minmax(130px,42%) 1fr;gap:18px;width:min(72%,680px);max-height:90%;overflow:auto;padding:clamp(14px,2vw,22px);transform:translate(-50%,-50%);background:rgba(255,255,255,.98);border:1px solid var(--line);border-radius:14px;box-shadow:0 20px 60px rgba(11,22,31,.34)}.detail[hidden]{display:none}.detail-close{position:absolute;top:8px;right:8px;z-index:2;display:grid;place-items:center;width:36px;height:36px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:50%;font-size:22px;line-height:1;cursor:pointer}.detail-close:hover{background:#fff8e8;border-color:var(--yellow)}.detail img{display:block;width:100%;height:auto;max-height:340px;object-fit:contain;border-radius:9px;background:#eef1ed}.detail h2{margin:0 36px 8px 0;font-size:clamp(17px,2.8vw,28px);line-height:1.05}.detail-copy{color:var(--muted);font-size:clamp(12px,1.6vw,15px);line-height:1.55}.detail-copy p{margin:0 0 9px}.detail-copy p:last-child{margin-bottom:0}.detail-copy ul,.detail-copy ol{margin:0 0 9px;padding-left:21px}.no-image{display:grid;place-items:center;min-height:140px;padding:14px;color:var(--muted);background:#eef1ed;border-radius:9px;font-size:12px;text-align:center}.footer{margin-top:12px;color:var(--muted);font-size:11px;text-align:center}
     @media(max-width:600px){.masthead{display:block}.hint{margin-top:10px}.detail{grid-template-columns:1fr;width:88%;max-height:92%}.detail img{max-height:240px}}
-    /* Einbettung: gesamte Karte passt ohne Seiten- oder iframe-Scrollen in den verfügbaren Viewport. */
-    html,body{height:100%;overflow:hidden}
-    .page{height:100dvh;display:flex;flex-direction:column;overflow:hidden;padding:clamp(10px,2vw,24px)}
-    .masthead{flex:0 0 auto;margin-bottom:clamp(8px,1.5vh,18px)}
-    .stage{flex:0 0 auto;width:auto;height:calc(100dvh - 190px);max-width:100%;aspect-ratio:1600 / 1999;margin:0 auto;}
-    .stage>img{width:100%;height:100%;object-fit:fill}
-    .footer{display:none}
-    @media(max-width:600px){.page{padding:10px}.stage{height:calc(100dvh - 220px);max-width:100%}}
+    /* Einbettung: keine künstliche Resthöhe unter dem Bild. */
+    html,body{height:auto;min-height:0;overflow:visible}
+    .page{height:auto;min-height:0;display:block;overflow:visible;padding:clamp(10px,2vw,24px)}
+    .masthead{margin-bottom:clamp(8px,1.5vh,18px)}
+    .stage{width:100%;height:auto;max-width:100%;aspect-ratio:auto;margin:0 auto;}
+    .stage>img{display:block;width:100%;height:auto;object-fit:contain}
+    .footer{display:none!important;height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
+    @media(max-width:600px){.page{padding:10px}.stage{height:auto;max-width:100%}}
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
   </style>
 </head>
@@ -41,6 +41,19 @@
       function closeDetail() {detail.hidden=true;$('items').querySelectorAll('button').forEach(b=>b.classList.remove('selected'))}
       function render(project){$('mainImage').src=project.mainImage;$('inventory').classList.toggle('right',project.inventorySide==='right');const hotspots=$('hotspots'),list=$('items');hotspots.replaceChildren();list.replaceChildren();items=project.hotspots||[];items.forEach(item=>{const point=document.createElement('button');point.type='button';point.className='hotspot';point.style.left=item.x+'%';point.style.top=item.y+'%';point.title=item.title;point.setAttribute('aria-label',item.title);point.addEventListener('click',()=>show(item));hotspots.append(point);const row=document.createElement('li'),button=document.createElement('button');button.type='button';button.dataset.id=item.id;button.textContent=item.title;button.addEventListener('click',()=>show(item));row.append(button);list.append(row)});$('loading').hidden=true;$('stage').hidden=false}
       $('detailClose').addEventListener('click',closeDetail);document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!detail.hidden)closeDetail()});fetch('projekt.json').then(r=>{if(!r.ok)throw Error();return r.json()}).then(render).catch(()=>{$('loading').textContent='Die Projektdatei konnte nicht geladen werden.'})
+    })();
+  </script>
+  <script>
+    (() => {
+      const sendHeight = () => {
+        const height = Math.ceil(document.documentElement.scrollHeight);
+        window.parent.postMessage({ type: 'polizei-ausruestung-height', height }, '*');
+      };
+      window.addEventListener('load', sendHeight);
+      window.addEventListener('resize', sendHeight);
+      if ('ResizeObserver' in window) new ResizeObserver(sendHeight).observe(document.documentElement);
+      setTimeout(sendHeight, 100);
+      setTimeout(sendHeight, 500);
     })();
   </script>
 </body>
